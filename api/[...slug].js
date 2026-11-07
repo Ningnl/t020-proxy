@@ -1,6 +1,7 @@
 // T-020 飞书 API 转发（Vercel Serverless，CORS 代理）
 // 路由：/api/*  →  https://open.feishu.cn/*
-// 前端「代理基址」填：https://<你的域名>/api
+// 注意：Vercel 在非 Next.js 项目里 [...slug] 只匹配单段路径，
+//       因此 vercel.json 用 rewrites 把原始路径以 __p 参数传入本函数。
 const ALLOW = ['https://ningnl.github.io', 'http://localhost:8787', 'http://127.0.0.1:8787'];
 
 module.exports = async function handler(req, res) {
@@ -17,9 +18,16 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const raw = req.url || '/';
-  const pathWithQuery = raw.replace(/^\/api/, '');
-  const target = 'https://open.feishu.cn' + pathWithQuery;
+  const q = Object.assign({}, req.query || {});
+  let upstreamPath = q.__p;
+  delete q.__p;
+  if (Array.isArray(upstreamPath)) upstreamPath = upstreamPath.join('/');
+  if (!upstreamPath) upstreamPath = (req.url || '/').replace(/^\/api/, '');
+  upstreamPath = String(upstreamPath);
+  if (upstreamPath.charAt(0) !== '/') upstreamPath = '/' + upstreamPath;
+
+  const qs = new URLSearchParams(q).toString();
+  const target = 'https://open.feishu.cn' + upstreamPath + (qs ? '?' + qs : '');
 
   const headers = { 'Content-Type': req.headers['content-type'] || 'application/json' };
   if (req.headers.authorization) headers.Authorization = req.headers.authorization;
