@@ -4,9 +4,17 @@
 //       因此 vercel.json 用 rewrites 把原始路径以 __p 参数传入本函数。
 const ALLOW = ['https://ningnl.github.io', 'http://localhost:8787', 'http://127.0.0.1:8787'];
 
+// 允许：线上 Pages、任意端口本地调试、以及 file:// 打开时的 null origin
+function isAllowed(origin) {
+  if (!origin) return false;
+  if (origin === 'null') return true;
+  if (origin === 'https://ningnl.github.io') return true;
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
 module.exports = async function handler(req, res) {
   const origin = req.headers.origin || '';
-  const allowOrigin = ALLOW.includes(origin) ? origin : ALLOW[0];
+  const allowOrigin = isAllowed(origin) ? origin : ALLOW[0];
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
